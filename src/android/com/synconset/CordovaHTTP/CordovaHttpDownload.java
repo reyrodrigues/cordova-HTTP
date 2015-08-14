@@ -24,12 +24,12 @@ import org.json.JSONObject;
 
 public class CordovaHttpDownload extends CordovaHttp implements Runnable {
     private String filePath;
-    
+
     public CordovaHttpDownload(String urlString, Map<?, ?> params, Map<String, String> headers, CallbackContext callbackContext, String filePath) {
         super(urlString, params, headers, callbackContext);
         this.filePath = filePath;
     }
-    
+
     @Override
     public void run() {
         try {
@@ -38,7 +38,7 @@ public class CordovaHttpDownload extends CordovaHttp implements Runnable {
             request.acceptCharset(CHARSET);
             request.headers(this.getHeaders());
             int code = request.code();
-            
+
             JSONObject response = new JSONObject();
             response.put("status", code);
             if (code >= 200 && code < 300) {

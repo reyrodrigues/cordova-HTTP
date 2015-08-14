@@ -3,7 +3,11 @@
  */
 package com.synconset;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.UnknownHostException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -23,24 +27,20 @@ import android.webkit.MimeTypeMap;
 
 import com.github.kevinsawicki.http.HttpRequest;
 import com.github.kevinsawicki.http.HttpRequest.HttpRequestException;
- 
+
 public class CordovaHttpUpload extends CordovaHttp implements Runnable {
     private String filePath;
     private String name;
-    
+
     public CordovaHttpUpload(String urlString, Map<?, ?> params, Map<String, String> headers, CallbackContext callbackContext, String filePath, String name) {
         super(urlString, params, headers, callbackContext);
         this.filePath = filePath;
         this.name = name;
     }
-    
+
     @Override
     public void run() {
         try {
-            HttpRequest request = HttpRequest.post(this.getUrlString());
-            this.setupSecurity(request);
-            request.acceptCharset(CHARSET);
-            request.headers(this.getHeaders());
             URI uri = new URI(filePath);
             int index = filePath.lastIndexOf('/');
             String filename = filePath.substring(index + 1);
@@ -48,27 +48,23 @@ public class CordovaHttpUpload extends CordovaHttp implements Runnable {
             String ext = filePath.substring(index + 1);
             MimeTypeMap mimeTypeMap = MimeTypeMap.getSingleton();
             String mimeType = mimeTypeMap.getMimeTypeFromExtension(ext);
-            request.part(this.name, filename, mimeType, new File(uri));
-            
-            Set<?> set = (Set<?>)this.getParams().entrySet();
-            Iterator<?> i = set.iterator();
-            while (i.hasNext()) {
-                Entry<?, ?> e = (Entry<?, ?>)i.next();
-                String key = (String)e.getKey();
-                Object value = e.getValue();
-                if (value instanceof Number) {
-                    request.part(key, (Number)value);
-                } else if (value instanceof String) {
-                    request.part(key, (String)value);
-                } else {
-                    this.respondWithError("All parameters must be Numbers or Strings");
-                    return;
-                }
+
+
+            HttpRequest request = HttpRequest.put(this.getUrlString());
+            request.headers(this.getHeaders());
+            this.setupSecurity(request);
+
+            final InputStream stream;
+            try {
+                stream = new BufferedInputStream(new FileInputStream(new File(uri)));
+            } catch (IOException e) {
+                throw new HttpRequestException(e);
             }
-            
+            request.send(stream);
+
             int code = request.code();
             String body = request.body(CHARSET);
-            
+
             JSONObject response = new JSONObject();
             response.put("status", code);
             if (code >= 200 && code < 300) {
